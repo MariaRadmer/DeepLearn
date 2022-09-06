@@ -96,15 +96,16 @@ class Game:
 
 
 class Node:
-    def __init__(self, state: State, parent: 'Node' = None):
+    def __init__(self, state: State, parent):
         #self.children: List['Nodes'] = []
         self.children = []
-        self.parent: 'Node' = parent
+        self.parent = parent
         self.state: State = state
         self.action = None
 
         self.q = 0
         self.wins = 0
+        self.lost = 0
         self.visits = 0
 
     def nonTerminal(self):
@@ -115,12 +116,21 @@ class Node:
         actions = len(self.state.get_avail_actions())
         return ((len(self.children)) < (actions-1))
 
-    def bestChild(self):
+    def bestChild(self):  # where to increase win ?
         if(self.parent != None):
-            self.q = (self.wins/self.visits) + 0.01 * \
-                sqrt(math.log(self.parent.visits)/self.visits)
+            self.q = (self.wins/self.visits) + 0.05 * \
+                math.sqrt((2*math.log(self.parent.visits))/self.visits)
 
         self.children.sort(key=lambda x: x.q)
+
+        """ 
+        print("wins ", self.wins, " lost ",
+              self.lost, "  visits ", self.visits)
+        if(self.parent != None):
+            print("  prerent visits ", self.parent.visits)
+        """
+
+        print(" best child q", self.children[0].q)
         return self.children[0]
 
 
@@ -129,7 +139,8 @@ class MCTS(Agent):
         super(MCTS, self).__init__(name)
         self.state = State()
         self.player = -1
-        self.v_0 = Node(None)
+        self.v_0 = Node(None, None)
+        self.graph = None
 
     def get_action(self, state: State):
         self.state = state
@@ -143,33 +154,40 @@ class MCTS(Agent):
             return 'O'
 
     def search(self):
-        state_init = deepcopy(self.state)
-        self.v_0 = Node(state_init, None)
+        if(self.v_0.state == None):
+            state_init = deepcopy(self.state)
+            self.v_0 = Node(state_init, None)
 
-        while (self.state.is_over):
+        serach_depth = 5000
+        counter = 0
+
+        # and not self.state.is_over()) #and (counter < serach_depth):
+        while (utility(self.state) == 0 and not self.state.is_over()):
             v_1 = self.treePolicy(self.v_0)
             stateThink = deepcopy(self.state)
 
             delta = self.defaultpolicy(stateThink)
             self.player *= -1
             self.backup(v_1, delta)
+            counter += 1
 
+        print("Action from serach", self.v_0.bestChild().action)
         return self.v_0.bestChild().action
 
     def treePolicy(self, node: Node):
         v = node
 
         while v.nonTerminal():
-
             if node.notFullyExpanded():
                 v = self.expand(node, self.state)
             else:
+                if(utility(v.state) > 0):
+                    v.wins += 1
                 v = node.bestChild()
                 break
         return v
 
     def expand(self, node: Node, state: State):
-        print("Expand...")
         actions = state.get_avail_actions()
         action = actions.pop(0)
 
@@ -179,15 +197,13 @@ class MCTS(Agent):
         v_ = Node(stateThink, node)
         v_.action = action
         node.children.append(v_)
-
         self.player *= -1
 
-        print("Expand DONE")
         return v_
 
     def defaultpolicy(self, state: State):
-        print("Defalut...")
         actions = state.get_avail_actions()
+        random.shuffle(actions)
         stateThink = None
 
         while (len(actions) > 1):
@@ -196,21 +212,16 @@ class MCTS(Agent):
             self.player *= -1
             stateThink.put_action(action, Agent(self.getPlayerName()))
 
-        print("Defalut DONE")
-
         return utility(stateThink)
 
     def backup(self, node: Node, delta):
-        print("Backup...")
         v = node
 
-        while v.parent is not None:
-
+        while (v.parent != None):
             N_v = v.parent
             N_v.visits += 1
             N_v.q = utility(N_v.state) + delta
             v = v.parent
-        print("Backup DONE!")
 
 
 agents = (Agent('O'), MCTS('X'))
