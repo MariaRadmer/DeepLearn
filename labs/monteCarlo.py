@@ -109,32 +109,30 @@ class Node:
         self.wins: int = 0
         self.visits: int = 0
 
+        self.c = sqrt(2)
+
     def nonTerminal(self):
         return not self.state.is_over()
 
     def notFullyExpanded(self):
         actions = len(self.state.get_avail_actions())
-        return ((len(self.children)) < (actions-1))
+        return ((len(self.children)) < (actions))
 
-    # this does not work
     def qValue(self):
-        p: Node = self.parent
+        p: Node = deepcopy(self.parent)
         if p != None:
-            print(p.visits)
 
-            tmp = (2*math.log(p.visits + 1)) ** .5
-            self.q = (self.wins/self.visits) + 0.001 * tmp
+            tmp = sqrt((2*math.log(p.visits + 1)) / self.visits)
+            self.q = (self.wins/self.visits) + self.c * tmp
             return self.q
         return 0
 
-    # this does not work
     def bestChild(self):
         self.children.sort(key=lambda x: x.q, reverse=True)
-        print(self.children)
         return self.children[0]
 
     def __repr__(self):
-        return str(self.wins)
+        return f"Wins {self.wins} visits {self.visits} q-value {self.q} action {self.action}\n"
 
 
 class MCTS(Agent):
@@ -162,7 +160,7 @@ class MCTS(Agent):
         self.v_0 = Node(state_init, None)
 
         start = time.time()
-        decision_time = 1.5
+        decision_time = 2
 
         while (utility(self.state) == 0 and not state_init.is_over() and (time.time() < start + decision_time)):
             v_1 = self.treePolicy(self.v_0)
@@ -180,8 +178,7 @@ class MCTS(Agent):
 
         while v.nonTerminal():
             if node.notFullyExpanded():
-                tmp = deepcopy(node)
-                v.children.append(self.expand(tmp, self.state))
+                self.expand(node, self.state)
             else:
                 v = node.bestChild()
                 break
@@ -221,7 +218,7 @@ class MCTS(Agent):
             if delta > 0:
                 v.wins += 1
 
-            v.q = v.qValue() + delta  # v.qValue() + delta # this does not work
+            v.q = v.qValue() + delta
             v = v.parent
 
 
