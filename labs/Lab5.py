@@ -108,6 +108,11 @@ def train(envrioment, agent: Agent, episodes=1000, batch_size=64):  # train for 
     y = []
 
     for e in tqdm(range(episodes)):
+
+        if e % 10 == 0:
+            torch.save(agent.model.state_dict(), 'model_4_32x32x32.pth')
+            print("save")
+
         state, _ = envrioment.reset()
         done = False
         total_r = 0
@@ -130,11 +135,11 @@ def train(envrioment, agent: Agent, episodes=1000, batch_size=64):  # train for 
     envrioment.close()
 
 
-env = gym.make('CartPole-v1', render_mode='human')
+"""env = gym.make('CartPole-v1', render_mode='human')
 agent = Agent(env.observation_space.shape[0], env.action_space.n)
 train(env, agent)
 env.close()
-torch.save(agent.model.state_dict(), 'model_8x8x8.pth')
+torch.save(agent.model.state_dict(), 'model_4_32x32x32.pth')"""
 
 """
 agent.model.state_dict = torch.load('model_8x8x8.pth')
