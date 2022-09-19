@@ -201,13 +201,13 @@ class MCTS(Agent):
         stateThink = deepcopy(self.state)
 
         while (not stateThink.is_over()):
+            self.player *= -1
             actions = stateThink.get_avail_actions()
             action = actions.pop(random.randrange(0, len(actions)))
 
             stateThink.put_action(action, Agent(self.getPlayerName()))
-            self.player *= -1
 
-        return utility(stateThink)
+        return (utility(stateThink)*self.player)  # is this correct ?
 
     def backup(self, node: Node, delta):
         v = node
