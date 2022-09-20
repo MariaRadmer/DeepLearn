@@ -18,12 +18,12 @@ from turtle import done, st
 class Model(nn.Module):
     def __init__(self, observation_size, action_size):
         super(Model, self).__init__()
-        self.dense1 = nn.Linear(observation_size, 32)
+        self.dense1 = nn.Linear(observation_size, 100)
 
-        self.dense2 = nn.Linear(32, 32)
-        self.dense3 = nn.Linear(32, 32)
+        self.dense2 = nn.Linear(100, 100)
+        self.dense3 = nn.Linear(100, 100)
         # had to hardcode it to 4 becuse action_size is 2
-        self.dense4 = nn.Linear(32, action_size)
+        self.dense4 = nn.Linear(100, action_size)
 
         torch.nn.init.xavier_uniform_(self.dense1.weight)
         torch.nn.init.xavier_uniform_(self.dense2.weight)
@@ -110,7 +110,7 @@ def train(envrioment, agent: Agent, episodes=1000, batch_size=64):  # train for 
     for e in tqdm(range(episodes)):
 
         if e % 10 == 0:
-            torch.save(agent.model.state_dict(), 'model_4_32x32x32.pth')
+            torch.save(agent.model.state_dict(), 'model_6_32x32x32.pth')
             print("save")
 
         state, _ = envrioment.reset()
@@ -135,16 +135,16 @@ def train(envrioment, agent: Agent, episodes=1000, batch_size=64):  # train for 
     envrioment.close()
 
 
-"""env = gym.make('CartPole-v1', render_mode='human')
+env = gym.make('CartPole-v1', render_mode='human')
 agent = Agent(env.observation_space.shape[0], env.action_space.n)
 train(env, agent)
 env.close()
-torch.save(agent.model.state_dict(), 'model_4_32x32x32.pth')"""
+torch.save(agent.model.state_dict(), 'model_6_32x32x32.pth')
 
-"""
-agent.model.state_dict = torch.load('model_8x8x8.pth')
-env = gym.make('CartPole-v1', render_mode='human')
+"""env = gym.make('CartPole-v1', render_mode='human')
 agent = Agent(env.observation_space.shape[0], env.action_space.n)
+agent.model.state_dict = torch.load('model_5_32x32x32.pth')
+
 
 for _ in tqdm(range(100)):
     state, _ = env.reset()
