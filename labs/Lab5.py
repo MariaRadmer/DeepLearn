@@ -64,21 +64,20 @@ class Agent:
         self.memory.append((state, action, reward, next_state, done))
 
     def act(self, state):
-        # return an action from the model
-        return int(self.model.predict(state))
-
-        """if random.random() < self.epsilon:
-            return random.randrange(0, 1)
-        else:"""
+        rand = random.uniform(0, 1)
+        if rand > self.epsilon:
+            return int(self.model.predict(state))
+        else:
+            return int(env.action_space.sample())
 
     def replay(self, batch_size):
         # update model based on replay memory
         # you might want to make a self.train() helper method
-        data_set = random.sample(self.memory, batch_size)
+        transition_set = random.sample(self.memory, batch_size)
         self.optimizer.zero_grad()
 
-        for trainsition in data_set:
-            self.train(trainsition)
+        for transition in transition_set:
+            self.train(transition)
 
         self.epsilon *= self.decay_rate
         self.optimizer.step()
@@ -97,20 +96,19 @@ class Agent:
             new_state = reward + gamma * \
                 float(torch.max(self.model.forward(next_state)))
 
-        pred = self.model.forward(state)[action]
-        loss = self.criterion(pred, new_state)
+        prediction = self.model.forward(state)[action]
+        loss = self.criterion(prediction, new_state)
         loss.backward()
 
 
+filename_out = '5 - model_7_100x100x100.pth'
+
+
 def train(envrioment, agent: Agent, episodes=1000, batch_size=64):  # train for many games
-
-    x = []
-    y = []
-
     for e in tqdm(range(episodes)):
 
         if e % 10 == 0:
-            torch.save(agent.model.state_dict(), 'model_6_32x32x32.pth')
+            torch.save(agent.model.state_dict(), filename_out)
             print("save")
 
         state, _ = envrioment.reset()
@@ -129,8 +127,6 @@ def train(envrioment, agent: Agent, episodes=1000, batch_size=64):  # train for 
             # 4. if we have enough experiences in out memory, learn from a batch with replay.
             if len(agent.memory) >= batch_size:
                 agent.replay(batch_size)
-        x.append(reward)
-        y.append(e)
 
     envrioment.close()
 
@@ -139,19 +135,4 @@ env = gym.make('CartPole-v1', render_mode='human')
 agent = Agent(env.observation_space.shape[0], env.action_space.n)
 train(env, agent)
 env.close()
-torch.save(agent.model.state_dict(), 'model_6_32x32x32.pth')
-
-"""env = gym.make('CartPole-v1', render_mode='human')
-agent = Agent(env.observation_space.shape[0], env.action_space.n)
-agent.model.state_dict = torch.load('model_5_32x32x32.pth')
-
-
-for _ in tqdm(range(100)):
-    state, _ = env.reset()
-    done = False
-    while not done:
-
-        action = agent.act(state)
-        next_state, reward, done, _, _ = env.step(action)
-
-env.close()"""
+torch.save(agent.model.state_dict(), filename_out)
