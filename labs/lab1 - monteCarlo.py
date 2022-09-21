@@ -196,9 +196,9 @@ class MCTS(Agent):
 
         return v_
 
-    def defaultpolicy(self, state: State):
+    def defaultpolicy(self, stateThink: State):
 
-        stateThink = deepcopy(self.state)
+        #stateThink = deepcopy(self.state)
 
         while (not stateThink.is_over()):
             self.player *= -1
