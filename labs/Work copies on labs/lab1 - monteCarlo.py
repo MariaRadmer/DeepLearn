@@ -41,6 +41,7 @@ class State:
 # evaluate the utility of a state
 
 
+# evaluate the utility of a state
 def utility(state: 'State'):
     board = state.board
     n_cols = len(board[0]) - 1
@@ -79,7 +80,24 @@ class Agent:
         return random.choice(state.get_avail_actions())
 
 
+class Human:
+    def __init__(self, name):
+        self.name = name
+
+    def get_action(self, state: State):
+        actiontoTake = -1
+
+        human = int(input())
+        actions = state.get_avail_actions()
+        if human in actions:
+            return human
+        else:
+            actiontoTake = random.choice(state.get_avail_actions())
+            return actiontoTake
+
 # connecting states and agents
+
+
 class Game:
     def __init__(self, agents: Tuple[Agent]):
         self.agents = agents
@@ -105,38 +123,50 @@ class Node:
         self.action = None
         self.tried = False
         self.untried = state.get_avail_actions()
-        self.player = True  # if X/max True else O/min False
 
         self.q: float = 0
         self.wins: int = 0
         self.visits: int = 0
         self.ucb = 0
-        self.c = sqrt(2)
+        self.c = 0.1
+        self.explore = 0.1
 
     def nonTerminal(self):
-        return not self.state.is_over()
+        return (utility(self.state) == 0 and not self.state.is_over())
 
     def notFullyExpanded(self):
         actions = len(self.state.get_avail_actions())
-        return ((len(self.children)) < (actions))
+        kids = len(self.children)
+
+        not_kids_equal_actions = (kids < actions)
+        return not_kids_equal_actions
 
     def qValue(self):
         p = self.parent
         if p != None:
             tmp = sqrt((2*math.log(p.visits+1)) / self.visits)
-            self.q = self.wins/self.visits
-            self.ucb = (self.q/self.visits) + self.c * \
-                tmp  # gange med - eller +
-            return self.ucb
+            q = self.wins/self.visits
+            q = q + self.c*tmp
+            return q
         return 0
 
-    def bestChild(self):
-        self.children.sort(key=lambda x: x.q, reverse=self.player)
+    def bestChild(self, minmax):
 
-        return self.children[0]
+        minimax_child = self.children[0]
+
+        if (minmax % 2) == 0:
+            for c in self.children:
+                if c.q < minimax_child.q:
+                    minimax_child = c
+        else:
+            for c in self.children:
+                if c.q > minimax_child.q:
+                    minimax_child = c
+
+        return minimax_child
 
     def __repr__(self):
-        return f"Wins {self.wins} visits {self.visits} q-value {round(self.q,3)} ucb-value {round(self.ucb,3)} action {self.action}\n"
+        return f"Wins {self.wins} visits {self.visits} q-value {round(self.q,3)} action {self.action}\n"
 
 
 class MCTS(Agent):
@@ -147,9 +177,12 @@ class MCTS(Agent):
         self.v_0 = None
         self.graph = None
 
+        self.minmax = 1
+
     def get_action(self, state: State):
         self.state = state
         action = self.search()
+        self.minmax += 1
         return action
 
     def getPlayerName(self):
@@ -169,47 +202,52 @@ class MCTS(Agent):
         while (utility(self.state) == 0 and not state_init.is_over() and (time.time() < start + decision_time)):
             v_1 = self.treePolicy(root)
             stateThink = deepcopy(state_init)
-
             delta = self.defaultpolicy(stateThink)
-
             self.backup(v_1, delta)
 
-        bestChild: Node = root.bestChild()
+        bestChild: Node = root.bestChild(self.minmax)
+
         return bestChild.action
 
     def treePolicy(self, node: Node):
         v = node
 
         while v.nonTerminal():
-            if node.notFullyExpanded():
-                self.expand(node, self.state)
+            if v.notFullyExpanded():
+                return self.expand(v, v.state)
             else:
-                v = node.bestChild()  # all q-values are 0???
-                break
+                v = v.bestChild(self.minmax)
         return v
 
     def expand(self, node: Node, state: State):
-        action = node.untried.pop(0)
+
+        action = None
+        if len(node.untried) == 1:
+            action = node.untried[0]
+            node.untried = []
+        else:
+            action = node.untried.pop(0)
 
         new_state = deepcopy(state)
-        new_state.put_action(action, Agent(self.getPlayerName()))
+        new_state.put_action(action, Agent('X'))
 
         v_ = Node(new_state, node)
-        v_.player = not node.player
         v_.action = action
+
         node.children.append(v_)
 
         return v_
 
     def defaultpolicy(self, stateThink: State):
 
-        while (not stateThink.is_over()):
+        s = deepcopy(stateThink)
+        while (utility(s) == 0 and not s.is_over()):
 
-            actions = stateThink.get_avail_actions()
+            actions = s.get_avail_actions()
             action = actions.pop(random.randrange(0, len(actions)))
-            stateThink.put_action(action, Agent(self.getPlayerName()))
+            s.put_action(action, Agent(self.getPlayerName()))
             self.player *= -1
-        return (utility(stateThink))  # is this correct ?
+        return utility(s)
 
     def backup(self, node: Node, delta):
         v = node
@@ -219,10 +257,8 @@ class MCTS(Agent):
             v.visits += 1
             if delta > 0:
                 v.wins += 1
-
-            v.q = (v.qValue() + delta)
+            v.q = v.qValue()   # + delta)
             v = v.parent
-            self.player *= -1
 
 
 agents = (Agent('O'), MCTS('X'))
