@@ -141,12 +141,12 @@ class Node:
         not_kids_equal_actions = (kids < actions)
         return not_kids_equal_actions
 
-    def qValue(self):
+    def qValue(self, explore):
         p = self.parent
         if p != None:
             tmp = sqrt((2*math.log(p.visits+1)) / self.visits)
             q = self.wins/self.visits
-            q = q + self.c*tmp
+            q = q + explore*tmp
             return q
         return 0
 
@@ -179,6 +179,9 @@ class MCTS(Agent):
 
         self.minmax = 1
 
+        self.explore = 0.5
+        self.decay = 0.1
+
     def get_action(self, state: State):
         self.state = state
         action = self.search()
@@ -206,6 +209,8 @@ class MCTS(Agent):
             self.backup(v_1, delta)
 
         bestChild: Node = root.bestChild(self.minmax)
+
+        self.explore *= self.decay
 
         return bestChild.action
 
@@ -257,7 +262,7 @@ class MCTS(Agent):
             v.visits += 1
             if delta > 0:
                 v.wins += 1
-            v.q = v.qValue()   # + delta)
+            v.q = v.qValue(self.explore)   # + delta)
             v = v.parent
 
 
